@@ -101,20 +101,87 @@ RISK_PROFILES = {
     }
 }
 
+# ─── Static Fallback Data (used if Yahoo Finance is blocked on Streamlit Cloud) ─
+def generate_fallback_data(asset_names, years=3):
+    """
+    Generates realistic synthetic price series using geometric Brownian motion.
+    Used as fallback when live data fetch fails (e.g. Streamlit Cloud network limits).
+    """
+    np.random.seed(42)
+    n_days = years * 252
+    dates  = pd.bdate_range(end=datetime.now(), periods=n_days)
+
+    # Approximate annual return & volatility assumptions per asset type
+    params = {
+        "Large Cap Equity": (0.14, 0.18),
+        "Mid Cap Equity":   (0.17, 0.24),
+        "Index ETF":        (0.13, 0.16),
+        "Gold":             (0.10, 0.13),
+        "Debt ETF":         (0.07, 0.04),
+        "Sectoral ETF":     (0.15, 0.22),
+    }
+    data = {}
+    for name in asset_names:
+        category = ASSET_UNIVERSE.get(name, (None, "Index ETF"))[1]
+        mu, sigma = params.get(category, (0.12, 0.18))
+        daily_mu    = mu / 252
+        daily_sigma = sigma / np.sqrt(252)
+        shocks  = np.random.normal(daily_mu, daily_sigma, n_days)
+        prices  = 100 * np.cumprod(1 + shocks)
+        data[name] = pd.Series(prices, index=dates)
+    return pd.DataFrame(data).dropna()
+
 # ─── Helper Functions ──────────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def fetch_price_data(tickers, years=3):
-    end = datetime.now()
-    start = end - timedelta(days=years*365)
-    data = {}
+    end   = datetime.now()
+    start = end - timedelta(days=years * 365)
+    data  = {}
+
     for name, (ticker, _) in tickers.items():
         try:
-            df = yf.download(ticker, start=start, end=end, progress=False, auto_adjust=True)
-            if len(df) > 50:
-                data[name] = df['Close']
-        except:
-            pass
-    return pd.DataFrame(data).dropna()
+            df = yf.download(
+                ticker, start=start, end=end,
+                progress=False, auto_adjust=True,
+                threads=False   # more stable on cloud environments
+            )
+            if df is None or df.empty or len(df) < 50:
+                continue
+
+            # yfinance sometimes returns MultiIndex columns — flatten safely
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = ['_'.join(c).strip() for c in df.columns]
+                close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
+                if not close_col:
+                    continue
+                series = df[close_col[0]]
+            else:
+                if 'Close' not in df.columns:
+                    continue
+                series = df['Close']
+
+            # Ensure it's a 1-D Series of floats
+            if isinstance(series, pd.DataFrame):
+                series = series.iloc[:, 0]
+            series = pd.to_numeric(series, errors='coerce').dropna()
+
+            if len(series) >= 50:
+                data[name] = series
+
+        except Exception:
+            continue
+
+    if len(data) < 2:
+        # Fall back to synthetic data so the app never crashes
+        return generate_fallback_data(list(tickers.keys()), years), True
+
+    try:
+        result = pd.DataFrame(data).dropna()
+        if result.shape[1] < 2:
+            return generate_fallback_data(list(tickers.keys()), years), True
+        return result, False
+    except Exception:
+        return generate_fallback_data(list(tickers.keys()), years), True
 
 def compute_returns(prices):
     return prices.pct_change().dropna()
@@ -284,16 +351,23 @@ st.plotly_chart(fig_gauge, use_container_width=True)
 
 # ─── Fetch Data ────────────────────────────────────────────────────────────────
 with st.spinner("📡 Fetching live price data from NSE..."):
-    prices = fetch_price_data(selected_assets, years=3)
+    prices, using_fallback = fetch_price_data(selected_assets, years=3)
 
-if prices.empty or len(prices.columns) < 2:
-    st.error("Could not fetch sufficient price data. Please check your internet connection and try again.")
+if prices is None or prices.empty or len(prices.columns) < 2:
+    st.error("Could not load data. Please refresh the page and try again.")
     st.stop()
+
+if using_fallback:
+    st.warning(
+        "⚠️ Live NSE data could not be fetched (Yahoo Finance is occasionally restricted on cloud servers). "
+        "Displaying results based on realistic simulated price data using historical return & volatility assumptions per asset class. "
+        "All portfolio math (MPT, Sharpe, Monte Carlo) is fully functional."
+    )
+else:
+    st.success(f"✅ Live data loaded — {len(prices.columns)} assets | {len(prices)} trading days (3 years)")
 
 available_assets = {k: v for k, v in selected_assets.items() if k in prices.columns}
 returns = compute_returns(prices)
-
-st.success(f"✅ Loaded {len(prices.columns)} assets | {len(prices)} trading days of data (3 years)")
 
 # ─── Run Monte Carlo Simulations ──────────────────────────────────────────────
 st.markdown('<div class="section-header">🎲 Efficient Frontier (3,000 Simulations)</div>', unsafe_allow_html=True)
