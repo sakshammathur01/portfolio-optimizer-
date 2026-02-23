@@ -461,13 +461,15 @@ RISK_PROFILES = {
 
 # ── Fallback GBM data ─────────────────────────────────────────────────────────
 CAT_PARAMS = {
-    "Large Cap":    (0.13, 0.17),
-    "Mid Cap":      (0.17, 0.24),
-    "Small Cap":    (0.20, 0.30),
-    "Index ETF":    (0.13, 0.15),
-    "Sectoral ETF": (0.15, 0.22),
-    "Gold":         (0.10, 0.13),
-    "Debt ETF":     (0.07, 0.04),
+    # (annual_return, annual_volatility) — calibrated to NSE historical averages
+    # Large cap Nifty 50 long-run CAGR ~12-13%, mid ~14-15%, small ~15-17%
+    "Large Cap":    (0.12, 0.18),
+    "Mid Cap":      (0.14, 0.22),
+    "Small Cap":    (0.16, 0.28),
+    "Index ETF":    (0.12, 0.16),
+    "Sectoral ETF": (0.13, 0.20),
+    "Gold":         (0.09, 0.12),
+    "Debt ETF":     (0.07, 0.03),
 }
 
 def generate_fallback_data(asset_names, years=3):
@@ -549,7 +551,7 @@ def monte_carlo(returns, n=3000):
 def optimal_portfolio(returns):
     n   = len(returns.columns)
     con = [{"type": "eq", "fun": lambda x: x.sum() - 1}]
-    bnd = tuple((0.02, 0.40) for _ in range(n))
+    bnd = tuple((0.02, 0.25) for _ in range(n))  # max 25% per asset — prevents error maximization
     ini = np.ones(n) / n
     res = minimize(lambda w: -portfolio_perf(w, returns)[2],
                    ini, method='SLSQP', bounds=bnd, constraints=con)
@@ -756,8 +758,9 @@ if is_fallback:
     st.markdown(f"""
     <div class="status-sim">
     ⚠️ <strong>Using Simulated Data</strong> — Yahoo Finance is occasionally rate-limited on cloud servers.
-    Prices are generated using Geometric Brownian Motion calibrated to each asset class's historical
-    return & volatility. All portfolio math (MPT, Sharpe, Monte Carlo) is fully functional.
+    Prices are generated using Geometric Brownian Motion calibrated to long-run NSE historical averages
+    (Large Cap ~12%, Mid Cap ~14%, Small Cap ~16% p.a.). Returns shown reflect these assumptions, not live market data.
+    All portfolio math (MPT, Sharpe, Monte Carlo) is fully functional. Live data loads correctly when run locally.
     </div>""", unsafe_allow_html=True)
 else:
     n_assets = prices.shape[1]
@@ -1095,4 +1098,3 @@ st.markdown(f"""
     Past performance does not guarantee future results. Consult a SEBI-registered advisor.</em>
 </div>
 """, unsafe_allow_html=True)
-# ── Sidebar ───────────────────────────────────────────────────────────────────
