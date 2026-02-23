@@ -787,9 +787,7 @@ fig_ef.add_trace(go.Scatter(
     marker=dict(
         color=mc_res[2], colorscale=[[0,"#DBEAFE"],[0.5,"#60A5FA"],[1,"#1D4ED8"]],
         size=5, opacity=0.55,
-        colorbar=dict(title="Sharpe", thickness=12, len=0.7,
-                      tickfont=dict(size=10, color=SLATE),
-                      titlefont=dict(size=10, color=SLATE)),
+        colorbar=dict(title="Sharpe", thickness=12, lenmode="fraction", len=0.7),
         line=dict(width=0),
     ),
     name="Simulated Portfolios",
@@ -1073,8 +1071,7 @@ fig_c = go.Figure(go.Heatmap(
     texttemplate="%{text}",
     textfont=dict(size=9, color=NAVY, family="JetBrains Mono"),
     hoverongaps=False,
-    colorbar=dict(thickness=12, len=0.9,
-                  tickfont=dict(size=9, color=SLATE)),
+    colorbar=dict(thickness=12, lenmode="fraction", len=0.9),
 ))
 fig_c.update_layout(
     height=420, paper_bgcolor=WHITE,
@@ -1098,3 +1095,4 @@ st.markdown(f"""
     Past performance does not guarantee future results. Consult a SEBI-registered advisor.</em>
 </div>
 """, unsafe_allow_html=True)
+# ── Sidebar ───────────────────────────────────────────────────────────────────
