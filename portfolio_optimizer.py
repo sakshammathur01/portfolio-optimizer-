@@ -459,8 +459,7 @@ with col2:
     st.plotly_chart(fig_bar, use_container_width=True)
 
 st.dataframe(
-    allocation_df.style.background_gradient(subset=["Weight (%)"], cmap="Blues")
-                       .format({"Weight (%)": "{:.2f}%", "Annual Return (%)": "{:.2f}%", "Annual Volatility (%)": "{:.2f}%"}),
+    allocation_df.style.format({"Weight (%)": "{:.2f}%", "Annual Return (%)": "{:.2f}%", "Annual Volatility (%)": "{:.2f}%"}),
     use_container_width=True, hide_index=True
 )
 
