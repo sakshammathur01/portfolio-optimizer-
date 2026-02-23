@@ -1,6 +1,6 @@
 """
-Portfolio Optimizer with Risk Profiling Engine — Indian Markets (NSE/BSE)
-Project 1 | Equity Capital Markets & Wealth Management
+Portfolio Optimizer — Nifty 500 Universe  |  Indian Markets
+Equity Capital Markets & Wealth Management Project
 """
 
 import streamlit as st
@@ -12,169 +12,511 @@ import plotly.express as px
 from scipy.optimize import minimize
 from datetime import datetime, timedelta
 import warnings
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
-# ─── Page Config ───────────────────────────────────────────────────────────────
+# ── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Portfolio Optimizer | Indian Markets",
-    page_icon="📈",
+    page_title="NiftyEdge | Portfolio Optimizer",
+    page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# ─── Custom CSS ────────────────────────────────────────────────────────────────
-st.markdown("""
+# ── Design Tokens ──────────────────────────────────────────────────────────────
+NAVY    = "#0F1C3F"
+NAVY2   = "#162244"
+GOLD    = "#C9A84C"
+GOLD2   = "#F0D080"
+TEAL    = "#0EA5A0"
+WHITE   = "#FFFFFF"
+OFF_WHITE = "#F7F8FC"
+SLATE   = "#64748B"
+LIGHT   = "#E8EDF5"
+GREEN   = "#10B981"
+RED     = "#EF4444"
+AMBER   = "#F59E0B"
+
+# ── Professional CSS ───────────────────────────────────────────────────────────
+st.markdown(f"""
 <style>
-    .stApp { background-color: #F4F6FB; }
-    .main-header {
-        background: linear-gradient(135deg, #1E2761 0%, #2563EB 100%);
-        padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem;
-        color: white; text-align: center;
-    }
-    .main-header h1 { font-size: 2.2rem; font-weight: 800; margin: 0; }
-    .main-header p { font-size: 1rem; opacity: 0.85; margin: 0.5rem 0 0 0; }
-    .metric-card {
-        background: white; border-radius: 10px; padding: 1.2rem;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.07); border-left: 4px solid #C9A84C;
-        margin-bottom: 1rem;
-    }
-    .metric-card h3 { margin: 0; font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; }
-    .metric-card h2 { margin: 0.2rem 0 0 0; font-size: 1.8rem; font-weight: 700; color: #1E2761; }
-    .section-header {
-        font-size: 1.2rem; font-weight: 700; color: #1E2761;
-        border-bottom: 3px solid #C9A84C; padding-bottom: 0.4rem; margin: 1.5rem 0 1rem 0;
-    }
-    .risk-badge {
-        display: inline-block; padding: 0.3rem 1rem; border-radius: 20px;
-        font-weight: 700; font-size: 0.9rem;
-    }
-    .stSidebar { background-color: #1E2761 !important; }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  /* ── Global ── */
+  html, body, [class*="css"] {{
+    font-family: 'DM Sans', sans-serif;
+    background-color: {OFF_WHITE};
+    color: #1A2540;
+  }}
+  .stApp {{ background-color: {OFF_WHITE}; }}
+
+  /* ── Hide Streamlit chrome ── */
+  #MainMenu, footer, header {{ visibility: hidden; }}
+  .block-container {{ padding: 0 2rem 3rem 2rem; max-width: 1400px; }}
+
+  /* ── Sidebar ── */
+  section[data-testid="stSidebar"] {{
+    background: linear-gradient(180deg, {NAVY} 0%, {NAVY2} 100%);
+    border-right: 1px solid rgba(201,168,76,0.2);
+  }}
+  section[data-testid="stSidebar"] * {{
+    color: {WHITE} !important;
+  }}
+  section[data-testid="stSidebar"] .stSlider > div > div > div > div {{
+    background: {GOLD} !important;
+  }}
+  section[data-testid="stSidebar"] .stSelectbox label,
+  section[data-testid="stSidebar"] .stSlider label,
+  section[data-testid="stSidebar"] .stNumberInput label,
+  section[data-testid="stSidebar"] .stTextInput label {{
+    color: {GOLD2} !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase;
+  }}
+  section[data-testid="stSidebar"] .stSelectbox > div > div {{
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(201,168,76,0.3) !important;
+    color: {WHITE} !important;
+    border-radius: 8px !important;
+  }}
+  section[data-testid="stSidebar"] input {{
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(201,168,76,0.3) !important;
+    color: {WHITE} !important;
+    border-radius: 8px !important;
+  }}
+  section[data-testid="stSidebar"] .stButton > button {{
+    width: 100%;
+    background: linear-gradient(135deg, {GOLD} 0%, {AMBER} 100%) !important;
+    color: {NAVY} !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 0.75rem 1rem !important;
+    letter-spacing: 0.04em;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.35);
+    transition: all 0.2s ease;
+    margin-top: 1rem;
+  }}
+  section[data-testid="stSidebar"] .stButton > button:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(201,168,76,0.5);
+  }}
+
+  /* ── Top banner ── */
+  .top-banner {{
+    background: linear-gradient(135deg, {NAVY} 0%, #1a3070 60%, #0d2550 100%);
+    border-radius: 16px;
+    padding: 2.2rem 2.5rem;
+    margin: 1.5rem 0 1.8rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid rgba(201,168,76,0.25);
+    box-shadow: 0 8px 40px rgba(15,28,63,0.18);
+    position: relative;
+    overflow: hidden;
+  }}
+  .top-banner::before {{
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }}
+  .top-banner::after {{
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 30%;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(14,165,160,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }}
+  .banner-left h1 {{
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.1rem;
+    color: {WHITE};
+    margin: 0 0 0.3rem 0;
+    line-height: 1.2;
+  }}
+  .banner-left h1 span {{ color: {GOLD}; }}
+  .banner-left p {{
+    color: rgba(255,255,255,0.65);
+    font-size: 0.9rem;
+    margin: 0;
+    font-weight: 300;
+  }}
+  .banner-pills {{
+    display: flex; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end;
+  }}
+  .pill {{
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: {GOLD2};
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }}
+
+  /* ── Section labels ── */
+  .section-label {{
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: {SLATE};
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 2rem 0 0.4rem 0;
+  }}
+  .section-title {{
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.45rem;
+    color: {NAVY};
+    margin: 0 0 1.2rem 0;
+    line-height: 1.3;
+  }}
+
+  /* ── KPI Cards ── */
+  .kpi-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 1.2rem 0;
+  }}
+  .kpi-card {{
+    background: {WHITE};
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem;
+    border: 1px solid {LIGHT};
+    box-shadow: 0 2px 16px rgba(15,28,63,0.06);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }}
+  .kpi-card:hover {{
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(15,28,63,0.11);
+  }}
+  .kpi-card::before {{
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }}
+  .kpi-navy::before  {{ background: {NAVY}; }}
+  .kpi-gold::before  {{ background: {GOLD}; }}
+  .kpi-teal::before  {{ background: {TEAL}; }}
+  .kpi-green::before {{ background: {GREEN}; }}
+  .kpi-label {{
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: {SLATE};
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 0.5rem;
+  }}
+  .kpi-value {{
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem;
+    color: {NAVY};
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }}
+  .kpi-sub {{
+    font-size: 0.75rem;
+    color: {SLATE};
+    font-weight: 400;
+  }}
+
+  /* ── Profile card ── */
+  .profile-card {{
+    background: {WHITE};
+    border-radius: 14px;
+    padding: 1.6rem;
+    border: 1px solid {LIGHT};
+    box-shadow: 0 2px 16px rgba(15,28,63,0.06);
+    margin-bottom: 1rem;
+  }}
+  .profile-badge {{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.1rem;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }}
+  .badge-aggressive {{ background: #FEE2E2; color: #991B1B; }}
+  .badge-moderate   {{ background: #FEF3C7; color: #92400E; }}
+  .badge-conservative {{ background: #DCFCE7; color: #14532D; }}
+  .profile-row {{
+    display: flex;
+    justify-content: space-between;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid {LIGHT};
+    font-size: 0.88rem;
+  }}
+  .profile-row:last-child {{ border-bottom: none; }}
+  .profile-row span:first-child {{ color: {SLATE}; }}
+  .profile-row span:last-child {{ font-weight: 600; color: {NAVY}; }}
+
+  /* ── Chart wrapper ── */
+  .chart-card {{
+    background: {WHITE};
+    border-radius: 14px;
+    padding: 1.5rem;
+    border: 1px solid {LIGHT};
+    box-shadow: 0 2px 16px rgba(15,28,63,0.06);
+    margin-bottom: 1.2rem;
+  }}
+  .chart-title {{
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: {NAVY};
+    margin-bottom: 0.2rem;
+  }}
+  .chart-sub {{
+    font-size: 0.78rem;
+    color: {SLATE};
+    margin-bottom: 1rem;
+  }}
+
+  /* ── Allocation table ── */
+  .alloc-table {{ width: 100%; border-collapse: collapse; font-size: 0.87rem; }}
+  .alloc-table th {{
+    background: {NAVY};
+    color: {GOLD2};
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }}
+  .alloc-table th:last-child {{ text-align: right; }}
+  .alloc-table td {{
+    padding: 0.7rem 1rem;
+    color: #1A2540;
+    border-bottom: 1px solid {LIGHT};
+    font-weight: 500;
+  }}
+  .alloc-table tr:last-child td {{ border-bottom: none; }}
+  .alloc-table tr:hover td {{ background: {OFF_WHITE}; }}
+  .alloc-table td.num {{ text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; color: {NAVY}; }}
+  .cat-chip {{
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }}
+
+  /* ── Status banners ── */
+  .status-live {{
+    background: #ECFDF5; border: 1px solid #6EE7B7;
+    color: #065F46; border-radius: 10px; padding: 0.75rem 1.1rem;
+    font-size: 0.85rem; font-weight: 500; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }}
+  .status-sim {{
+    background: #FFFBEB; border: 1px solid #FCD34D;
+    color: #78350F; border-radius: 10px; padding: 0.75rem 1.1rem;
+    font-size: 0.85rem; font-weight: 500; margin-bottom: 1rem;
+  }}
+
+  /* ── Footer ── */
+  .footer {{
+    text-align: center;
+    padding: 2rem 0 1rem;
+    color: {SLATE};
+    font-size: 0.78rem;
+    border-top: 1px solid {LIGHT};
+    margin-top: 3rem;
+  }}
+  .footer strong {{ color: {NAVY}; }}
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Asset Universe (Indian Markets) ─────────────────────────────────────────
+# ── Nifty 500 Asset Universe ───────────────────────────────────────────────────
 ASSET_UNIVERSE = {
-    # Large Cap Stocks (NSE)
-    "Reliance Industries":     ("RELIANCE.NS", "Large Cap Equity"),
-    "HDFC Bank":               ("HDFCBANK.NS",  "Large Cap Equity"),
-    "Infosys":                 ("INFY.NS",       "Large Cap Equity"),
-    "TCS":                     ("TCS.NS",        "Large Cap Equity"),
-    "ICICI Bank":              ("ICICIBANK.NS",  "Large Cap Equity"),
-    # Mid Cap
-    "Tata Motors":             ("TATAMOTORS.NS", "Mid Cap Equity"),
-    "Bajaj Finance":           ("BAJFINANCE.NS", "Mid Cap Equity"),
-    # Index ETFs
-    "Nifty 50 ETF (NIFTYBEES)": ("NIFTYBEES.NS", "Index ETF"),
-    "Nifty Next 50 ETF":       ("JUNIORBEES.NS", "Index ETF"),
-    # Gold
-    "Gold ETF (GOLDBEES)":     ("GOLDBEES.NS",   "Gold"),
-    # Bonds / Stable
-    "Bharat Bond ETF Apr 2032":("EBBETF0432.NS", "Debt ETF"),
-    # International
-    "Nifty IT ETF":            ("NIFTYIT.NS",    "Sectoral ETF"),
+    # ── Large Cap (Nifty 50) ──
+    "Reliance Industries":   ("RELIANCE.NS",   "Large Cap"),
+    "HDFC Bank":             ("HDFCBANK.NS",   "Large Cap"),
+    "Infosys":               ("INFY.NS",        "Large Cap"),
+    "TCS":                   ("TCS.NS",         "Large Cap"),
+    "ICICI Bank":            ("ICICIBANK.NS",   "Large Cap"),
+    "Bharti Airtel":         ("BHARTIARTL.NS",  "Large Cap"),
+    "SBI":                   ("SBIN.NS",        "Large Cap"),
+    "HUL":                   ("HINDUNILVR.NS",  "Large Cap"),
+    "Axis Bank":             ("AXISBANK.NS",    "Large Cap"),
+    "Kotak Mahindra Bank":   ("KOTAKBANK.NS",   "Large Cap"),
+    "L&T":                   ("LT.NS",          "Large Cap"),
+    "Wipro":                 ("WIPRO.NS",       "Large Cap"),
+    "HCL Technologies":      ("HCLTECH.NS",     "Large Cap"),
+    "ITC":                   ("ITC.NS",         "Large Cap"),
+    "Sun Pharma":            ("SUNPHARMA.NS",   "Large Cap"),
+    "Maruti Suzuki":         ("MARUTI.NS",      "Large Cap"),
+    "Titan Company":         ("TITAN.NS",       "Large Cap"),
+    "UltraTech Cement":      ("ULTRACEMCO.NS",  "Large Cap"),
+    "NTPC":                  ("NTPC.NS",        "Large Cap"),
+    "Power Grid":            ("POWERGRID.NS",   "Large Cap"),
+
+    # ── Mid Cap (Nifty Midcap 150) ──
+    "Tata Motors":           ("TATAMOTORS.NS",  "Mid Cap"),
+    "Bajaj Finance":         ("BAJFINANCE.NS",  "Mid Cap"),
+    "Tata Power":            ("TATAPOWER.NS",   "Mid Cap"),
+    "Voltas":                ("VOLTAS.NS",      "Mid Cap"),
+    "IDFC First Bank":       ("IDFCFIRSTB.NS",  "Mid Cap"),
+    "Mphasis":               ("MPHASIS.NS",     "Mid Cap"),
+    "Crompton Greaves":      ("CROMPTON.NS",    "Mid Cap"),
+    "Trent":                 ("TRENT.NS",       "Mid Cap"),
+    "Indian Hotels":         ("INDHOTEL.NS",    "Mid Cap"),
+    "Persistent Systems":    ("PERSISTENT.NS",  "Mid Cap"),
+    "Coforge":               ("COFORGE.NS",     "Mid Cap"),
+    "Max Healthcare":        ("MAXHEALTH.NS",   "Mid Cap"),
+    "Apollo Hospitals":      ("APOLLOHOSP.NS",  "Mid Cap"),
+    "Godrej Properties":     ("GODREJPROP.NS",  "Mid Cap"),
+    "Oberoi Realty":         ("OBEROIRLTY.NS",  "Mid Cap"),
+
+    # ── Small Cap (Nifty Smallcap 250) ──
+    "Happiest Minds":        ("HAPPSTMNDS.NS",  "Small Cap"),
+    "KPIT Technologies":     ("KPITTECH.NS",    "Small Cap"),
+    "Latent View Analytics": ("LATENTVIEW.NS",  "Small Cap"),
+    "Kaynes Technology":     ("KAYNES.NS",      "Small Cap"),
+    "Syrma SGS":             ("SYRMA.NS",       "Small Cap"),
+    "Tata Elxsi":            ("TATAELXSI.NS",   "Small Cap"),
+    "Affle India":           ("AFFLE.NS",       "Small Cap"),
+    "Route Mobile":          ("ROUTE.NS",       "Small Cap"),
+    "Bikaji Foods":          ("BIKAJI.NS",      "Small Cap"),
+    "Medplus Health":        ("MEDPLUS.NS",     "Small Cap"),
+
+    # ── Index ETFs ──
+    "Nifty 50 ETF (NIFTYBEES)":    ("NIFTYBEES.NS",  "Index ETF"),
+    "Nifty Next 50 ETF":           ("JUNIORBEES.NS",  "Index ETF"),
+    "Nifty Midcap 150 ETF":        ("MIDCAP150.NS",   "Index ETF"),
+    "Nifty IT ETF":                ("NIFTYIT.NS",     "Sectoral ETF"),
+    "Nifty Pharma ETF":            ("PHARMABEES.NS",  "Sectoral ETF"),
+    "Nifty Bank ETF (BANKBEES)":   ("BANKBEES.NS",    "Sectoral ETF"),
+
+    # ── Alternatives ──
+    "Gold ETF (GOLDBEES)":         ("GOLDBEES.NS",    "Gold"),
+    "Bharat Bond ETF Apr 2032":    ("EBBETF0432.NS",  "Debt ETF"),
 }
 
+# ── Category colours (for chips and charts) ──────────────────────────────────
+CAT_COLOURS = {
+    "Large Cap":    ("#1E3A8A", "#DBEAFE", "#1D4ED8"),
+    "Mid Cap":      ("#7C2D12", "#FEF3C7", "#B45309"),
+    "Small Cap":    ("#14532D", "#DCFCE7", "#16A34A"),
+    "Index ETF":    ("#1E2761", "#E0E7FF", "#4338CA"),
+    "Sectoral ETF": ("#6B21A8", "#F3E8FF", "#9333EA"),
+    "Gold":         ("#78350F", "#FEF3C7", "#D97706"),
+    "Debt ETF":     ("#0F766E", "#CCFBF1", "#0D9488"),
+}
+
+# ── Risk profile definitions ───────────────────────────────────────────────────
 RISK_PROFILES = {
     "Conservative": {
         "score_range": (0, 35),
-        "color": "#16A34A",
-        "description": "Capital preservation with stable returns",
-        "constraints": {"equity_max": 0.30, "debt_min": 0.50, "gold_min": 0.10},
+        "badge_class": "badge-conservative",
+        "description": "Capital preservation with steady, low-risk returns.",
         "expected_return_range": "7–9%",
-        "target_assets": ["Bharat Bond ETF Apr 2032", "Gold ETF (GOLDBEES)", "Nifty 50 ETF (NIFTYBEES)", "HDFC Bank"],
+        "target_assets": [
+            "Bharat Bond ETF Apr 2032", "Gold ETF (GOLDBEES)",
+            "Nifty 50 ETF (NIFTYBEES)", "HDFC Bank", "ITC", "Power Grid",
+        ],
     },
     "Moderate": {
         "score_range": (36, 65),
-        "color": "#CA8A04",
-        "description": "Balanced growth with moderate risk tolerance",
-        "constraints": {"equity_max": 0.60, "debt_min": 0.25, "gold_min": 0.05},
+        "badge_class": "badge-moderate",
+        "description": "Balanced growth with diversified risk exposure.",
         "expected_return_range": "10–13%",
-        "target_assets": ["Nifty 50 ETF (NIFTYBEES)", "HDFC Bank", "Infosys", "Gold ETF (GOLDBEES)", "Bharat Bond ETF Apr 2032"],
+        "target_assets": [
+            "Nifty 50 ETF (NIFTYBEES)", "Nifty Next 50 ETF", "HDFC Bank",
+            "Infosys", "Apollo Hospitals", "Gold ETF (GOLDBEES)",
+            "Bharat Bond ETF Apr 2032", "Trent", "Max Healthcare",
+        ],
     },
     "Aggressive": {
         "score_range": (66, 100),
-        "color": "#DC2626",
-        "description": "Maximum growth, comfortable with high volatility",
-        "constraints": {"equity_max": 0.90, "debt_min": 0.05, "gold_min": 0.05},
-        "expected_return_range": "14–18%",
-        "target_assets": ["Reliance Industries", "HDFC Bank", "Infosys", "TCS", "Tata Motors", "Bajaj Finance", "Gold ETF (GOLDBEES)"],
-    }
+        "badge_class": "badge-aggressive",
+        "description": "Maximum growth across large, mid and small cap universe.",
+        "expected_return_range": "14–20%",
+        "target_assets": [
+            "Reliance Industries", "HDFC Bank", "Infosys", "TCS",
+            "Tata Motors", "Bajaj Finance", "Persistent Systems", "Coforge",
+            "Tata Elxsi", "KPIT Technologies", "Happiest Minds",
+            "Kaynes Technology", "Gold ETF (GOLDBEES)", "Nifty Midcap 150 ETF",
+        ],
+    },
 }
 
-# ─── Static Fallback Data (used if Yahoo Finance is blocked on Streamlit Cloud) ─
+# ── Fallback GBM data ─────────────────────────────────────────────────────────
+CAT_PARAMS = {
+    "Large Cap":    (0.13, 0.17),
+    "Mid Cap":      (0.17, 0.24),
+    "Small Cap":    (0.20, 0.30),
+    "Index ETF":    (0.13, 0.15),
+    "Sectoral ETF": (0.15, 0.22),
+    "Gold":         (0.10, 0.13),
+    "Debt ETF":     (0.07, 0.04),
+}
+
 def generate_fallback_data(asset_names, years=3):
-    """
-    Generates realistic synthetic price series using geometric Brownian motion.
-    Used as fallback when live data fetch fails (e.g. Streamlit Cloud network limits).
-    """
     np.random.seed(42)
     n_days = years * 252
     dates  = pd.bdate_range(end=datetime.now(), periods=n_days)
-
-    # Approximate annual return & volatility assumptions per asset type
-    params = {
-        "Large Cap Equity": (0.14, 0.18),
-        "Mid Cap Equity":   (0.17, 0.24),
-        "Index ETF":        (0.13, 0.16),
-        "Gold":             (0.10, 0.13),
-        "Debt ETF":         (0.07, 0.04),
-        "Sectoral ETF":     (0.15, 0.22),
-    }
-    data = {}
-    for name in asset_names:
-        category = ASSET_UNIVERSE.get(name, (None, "Index ETF"))[1]
-        mu, sigma = params.get(category, (0.12, 0.18))
-        daily_mu    = mu / 252
-        daily_sigma = sigma / np.sqrt(252)
-        shocks  = np.random.normal(daily_mu, daily_sigma, n_days)
-        prices  = 100 * np.cumprod(1 + shocks)
-        data[name] = pd.Series(prices, index=dates)
+    data   = {}
+    for i, name in enumerate(asset_names):
+        cat         = ASSET_UNIVERSE.get(name, (None, "Index ETF"))[1]
+        mu, sigma   = CAT_PARAMS.get(cat, (0.13, 0.18))
+        # add small cross-correlation via common factor
+        common      = np.random.normal(0, 0.008, n_days)
+        idio        = np.random.normal(mu/252, sigma/np.sqrt(252), n_days)
+        shocks      = 0.55 * common + 0.45 * idio
+        data[name]  = pd.Series(100 * np.cumprod(1 + shocks), index=dates)
     return pd.DataFrame(data).dropna()
 
-# ─── Helper Functions ──────────────────────────────────────────────────────────
-@st.cache_data(ttl=3600)
-def fetch_price_data(tickers, years=3):
-    end   = datetime.now()
-    start = end - timedelta(days=years * 365)
-    data  = {}
-
+# ── Data fetching ─────────────────────────────────────────────────────────────
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_price_data(tickers_tuple, years=3):
+    tickers = dict(tickers_tuple)
+    end     = datetime.now()
+    start   = end - timedelta(days=years * 365)
+    data    = {}
     for name, (ticker, _) in tickers.items():
         try:
-            df = yf.download(
-                ticker, start=start, end=end,
-                progress=False, auto_adjust=True,
-                threads=False   # more stable on cloud environments
-            )
+            df = yf.download(ticker, start=start, end=end,
+                             progress=False, auto_adjust=True, threads=False)
             if df is None or df.empty or len(df) < 50:
                 continue
-
-            # yfinance sometimes returns MultiIndex columns — flatten safely
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = ['_'.join(c).strip() for c in df.columns]
-                close_col = [c for c in df.columns if 'Close' in c or 'close' in c]
-                if not close_col:
-                    continue
-                series = df[close_col[0]]
+                close_cols = [c for c in df.columns if 'close' in c.lower()]
+                if not close_cols: continue
+                series = df[close_cols[0]]
             else:
-                if 'Close' not in df.columns:
-                    continue
+                if 'Close' not in df.columns: continue
                 series = df['Close']
-
-            # Ensure it's a 1-D Series of floats
             if isinstance(series, pd.DataFrame):
                 series = series.iloc[:, 0]
             series = pd.to_numeric(series, errors='coerce').dropna()
-
             if len(series) >= 50:
                 data[name] = series
-
         except Exception:
             continue
 
-    if len(data) < 2:
-        # Fall back to synthetic data so the app never crashes
+    fallback = len(data) < 2
+    if fallback:
         return generate_fallback_data(list(tickers.keys()), years), True
-
     try:
         result = pd.DataFrame(data).dropna()
         if result.shape[1] < 2:
@@ -183,345 +525,576 @@ def fetch_price_data(tickers, years=3):
     except Exception:
         return generate_fallback_data(list(tickers.keys()), years), True
 
+# ── Portfolio math ─────────────────────────────────────────────────────────────
 def compute_returns(prices):
     return prices.pct_change().dropna()
 
-def portfolio_performance(weights, returns):
-    port_return = np.sum(returns.mean() * weights) * 252
-    port_vol    = np.sqrt(weights @ (returns.cov() * 252) @ weights)
-    sharpe      = (port_return - 0.065) / port_vol  # 6.5% risk-free (India)
-    return port_return, port_vol, sharpe
+def portfolio_perf(weights, returns):
+    r  = np.sum(returns.mean() * weights) * 252
+    v  = np.sqrt(weights @ (returns.cov() * 252) @ weights)
+    sh = (r - 0.065) / v
+    return r, v, sh
 
-def run_monte_carlo(returns, n_portfolios=3000):
-    n_assets = len(returns.columns)
-    results = np.zeros((4, n_portfolios))
-    weights_arr = []
-    for i in range(n_portfolios):
-        w = np.random.dirichlet(np.ones(n_assets))
-        r, v, s = portfolio_performance(w, returns)
-        results[:, i] = [r, v, s, i]
-        weights_arr.append(w)
-    return results, weights_arr
+def monte_carlo(returns, n=3000):
+    n_a  = len(returns.columns)
+    res  = np.zeros((3, n))
+    wts  = []
+    for i in range(n):
+        w          = np.random.dirichlet(np.ones(n_a))
+        r, v, s    = portfolio_perf(w, returns)
+        res[:, i]  = [r, v, s]
+        wts.append(w)
+    return res, wts
 
-def get_optimal_portfolio(returns):
-    n = len(returns.columns)
-    constraints = [{"type": "eq", "fun": lambda x: np.sum(x) - 1}]
-    bounds = tuple((0.02, 0.45) for _ in range(n))
-    init   = np.ones(n) / n
-    # Maximize Sharpe
-    res = minimize(lambda w: -portfolio_performance(w, returns)[2], init, method='SLSQP', bounds=bounds, constraints=constraints)
-    return res.x if res.success else init
+def optimal_portfolio(returns):
+    n   = len(returns.columns)
+    con = [{"type": "eq", "fun": lambda x: x.sum() - 1}]
+    bnd = tuple((0.02, 0.40) for _ in range(n))
+    ini = np.ones(n) / n
+    res = minimize(lambda w: -portfolio_perf(w, returns)[2],
+                   ini, method='SLSQP', bounds=bnd, constraints=con)
+    return res.x if res.success else ini
 
-def calculate_risk_score(age, income, horizon, existing_investments, risk_q, dependents):
-    score = 0
-    # Age (younger = more aggressive)
-    if age < 30: score += 25
-    elif age < 40: score += 20
-    elif age < 50: score += 12
-    elif age < 60: score += 6
-    else: score += 2
-    # Horizon
-    if horizon > 15: score += 20
-    elif horizon > 7: score += 14
-    elif horizon > 3: score += 8
-    else: score += 3
-    # Income (higher = can take more risk)
-    if income > 200000: score += 20
-    elif income > 100000: score += 15
-    elif income > 50000: score += 10
-    else: score += 5
-    # Self-assessed risk
-    score += {"Very Low": 3, "Low": 8, "Medium": 14, "High": 20, "Very High": 25}[risk_q]
-    # Dependents (more = conservative)
-    score -= min(dependents * 3, 10)
-    # Existing investments
-    score += {"None": 0, "FD/RD only": 3, "MF/Stocks": 8, "Diverse portfolio": 12}[existing_investments]
-    return max(0, min(100, score))
+def risk_score(age, income, horizon, existing, risk_q, deps):
+    s  = 0
+    s += {True: 25, False: 0}[age < 30] or ({True: 20}[age < 40] if age < 40 else ({True: 12}[age < 50] if age < 50 else ({True: 6}[age < 60] if age < 60 else 2)))
+    s += 20 if horizon > 15 else (14 if horizon > 7 else (8 if horizon > 3 else 3))
+    s += 20 if income > 200000 else (15 if income > 100000 else (10 if income > 50000 else 5))
+    s += {"Very Low": 3, "Low": 8, "Medium": 14, "High": 20, "Very High": 25}[risk_q]
+    s -= min(deps * 3, 10)
+    s += {"None": 0, "FD/RD only": 3, "MF/Stocks": 8, "Diverse portfolio": 12}[existing]
+    return max(0, min(100, int(s)))
 
-def get_risk_profile(score):
-    for profile, data in RISK_PROFILES.items():
-        lo, hi = data["score_range"]
-        if lo <= score <= hi:
-            return profile
+def get_profile(score):
+    for p, d in RISK_PROFILES.items():
+        if d["score_range"][0] <= score <= d["score_range"][1]:
+            return p
     return "Moderate"
 
-def project_wealth(monthly_sip, annual_return, years):
-    monthly_rate = annual_return / 12
-    months = years * 12
-    future_value = monthly_sip * (((1 + monthly_rate) ** months - 1) / monthly_rate) * (1 + monthly_rate)
-    return future_value
+def sip_projection(monthly, rate, years):
+    mr = rate / 12
+    m  = years * 12
+    return monthly * (((1 + mr)**m - 1) / mr) * (1 + mr)
 
-# ─── Sidebar: Risk Questionnaire ──────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🎯 Risk Profiling")
-    st.markdown("---")
+    st.markdown(f"""
+    <div style='padding:1.4rem 0.5rem 1rem; border-bottom:1px solid rgba(201,168,76,0.2); margin-bottom:1.2rem;'>
+        <div style='font-family:"DM Serif Display",serif; font-size:1.3rem; color:{GOLD};'>NiftyEdge</div>
+        <div style='font-size:0.72rem; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;'>Portfolio Optimizer</div>
+    </div>
+    <div style='font-size:0.7rem; color:{GOLD2}; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.8rem;'>
+        📋 Risk Questionnaire
+    </div>
+    """, unsafe_allow_html=True)
 
-    name   = st.text_input("Your Name", "Investor")
-    age    = st.slider("Age", 18, 70, 30)
-    income = st.select_slider("Monthly Income (₹)", options=[25000, 50000, 75000, 100000, 150000, 200000, 300000, 500000], value=100000,
-                              format_func=lambda x: f"₹{x:,}")
+    name        = st.text_input("Your Name", "Investor", label_visibility="visible")
+    age         = st.slider("Age", 18, 70, 28)
+    income      = st.select_slider("Monthly Income (₹)",
+                    options=[25000,50000,75000,100000,150000,200000,300000,500000],
+                    value=100000,
+                    format_func=lambda x: f"₹{x:,}")
     horizon     = st.slider("Investment Horizon (Years)", 1, 30, 10)
-    dependents  = st.slider("No. of Dependents", 0, 5, 1)
-    existing_inv= st.selectbox("Existing Investments", ["None", "FD/RD only", "MF/Stocks", "Diverse portfolio"])
-    risk_q      = st.select_slider("Risk Comfort Level", options=["Very Low", "Low", "Medium", "High", "Very High"], value="Medium")
-    monthly_sip = st.number_input("Monthly SIP Amount (₹)", min_value=1000, max_value=500000, value=10000, step=1000)
+    deps        = st.slider("Dependents", 0, 5, 1)
+    existing    = st.selectbox("Existing Investments",
+                    ["None","FD/RD only","MF/Stocks","Diverse portfolio"])
+    risk_q      = st.select_slider("Risk Comfort",
+                    options=["Very Low","Low","Medium","High","Very High"],
+                    value="Medium")
+    monthly_sip = st.number_input("Monthly SIP (₹)", 1000, 500000, 10000, 1000)
 
-    st.markdown("---")
-    run_btn = st.button("🚀 Generate My Portfolio", type="primary", use_container_width=True)
+    st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
+    run = st.button("⚡ Generate Portfolio")
 
-# ─── Main App ─────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="main-header">
-    <h1>📈 Portfolio Optimizer — Indian Markets</h1>
-    <p>Modern Portfolio Theory · NSE/BSE Assets · Efficient Frontier · Wealth Projection</p>
+    st.markdown(f"""
+    <div style='margin-top:2rem; padding:1rem; background:rgba(255,255,255,0.05);
+         border-radius:10px; border:1px solid rgba(201,168,76,0.15);'>
+        <div style='font-size:0.68rem; color:{GOLD2}; font-weight:700;
+             letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.6rem;'>
+             Universe Coverage
+        </div>
+        <div style='font-size:0.82rem; color:rgba(255,255,255,0.75); line-height:1.8;'>
+            🔵 20 Large Cap stocks<br>
+            🟠 15 Mid Cap stocks<br>
+            🟢 10 Small Cap stocks<br>
+            🟣 6 Index / Sectoral ETFs<br>
+            🟡 1 Gold ETF · 1 Debt ETF
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── Top Banner ─────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="top-banner">
+    <div class="banner-left">
+        <h1>Nifty<span>Edge</span> Portfolio Optimizer</h1>
+        <p>Modern Portfolio Theory · Nifty 500 Universe · Markowitz Efficient Frontier · Live NSE Data</p>
+    </div>
+    <div class="banner-pills">
+        <span class="pill">Nifty 500</span>
+        <span class="pill">MPT</span>
+        <span class="pill">Monte Carlo</span>
+        <span class="pill">Sharpe Optimised</span>
+        <span class="pill">Feb 2026</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-if not run_btn:
-    st.info("👈 Fill in your risk profile in the sidebar and click **Generate My Portfolio** to begin.")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        **🔬 What This Tool Does**
-        - Scores your risk profile from 0–100
-        - Selects appropriate assets from NSE/BSE
-        - Runs 3,000 Monte Carlo simulations
-        - Plots the Efficient Frontier
-        - Finds your optimal Sharpe Ratio portfolio
-        """)
-    with col2:
-        st.markdown("""
-        **📊 Methodology**
-        - Markowitz Modern Portfolio Theory
-        - 3-year historical price data (NSE)
-        - Annualised return & volatility
-        - Sharpe Ratio = (Return − 6.5%) / Vol
-        - Scipy SLSQP optimisation
-        """)
-    with col3:
-        st.markdown("""
-        **💼 Asset Universe**
-        - Large Cap: Reliance, HDFC Bank, TCS, Infosys
-        - Mid Cap: Tata Motors, Bajaj Finance
-        - Index ETFs: Nifty50, Nifty Next 50
-        - Gold: GOLDBEES ETF
-        - Debt: Bharat Bond ETF
-        """)
+# ── Landing state ──────────────────────────────────────────────────────────────
+if not run:
+    c1, c2, c3 = st.columns(3)
+    for col, icon, title, desc in [
+        (c1, "🧠", "Risk Profiling Engine", "6-factor questionnaire scores your risk appetite from 0–100 and maps you to Conservative, Moderate, or Aggressive profile."),
+        (c2, "📐", "Markowitz Optimisation", "Runs 3,000 Monte Carlo simulations to plot the Efficient Frontier, then finds your Sharpe-optimal portfolio using SLSQP."),
+        (c3, "📈", "Nifty 500 Universe", "Draws from 53 assets across large, mid & small cap stocks, index ETFs, sectoral ETFs, gold and debt — matched to your risk profile."),
+    ]:
+        with col:
+            st.markdown(f"""
+            <div class="chart-card" style="text-align:center; padding:2rem 1.5rem;">
+                <div style="font-size:2.5rem; margin-bottom:0.8rem;">{icon}</div>
+                <div style="font-family:'DM Serif Display',serif; font-size:1.1rem;
+                     color:{NAVY}; margin-bottom:0.6rem;">{title}</div>
+                <div style="font-size:0.85rem; color:{SLATE}; line-height:1.6;">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
     st.stop()
 
-# ─── Compute Risk Score ────────────────────────────────────────────────────────
-risk_score  = calculate_risk_score(age, income, horizon, existing_inv, risk_q, dependents)
-risk_profile= get_risk_profile(risk_score)
-profile_data= RISK_PROFILES[risk_profile]
-selected_assets = {k: v for k, v in ASSET_UNIVERSE.items() if k in profile_data["target_assets"]}
+# ── Compute risk profile ───────────────────────────────────────────────────────
+score   = risk_score(age, income, horizon, existing, risk_q, deps)
+profile = get_profile(score)
+pdata   = RISK_PROFILES[profile]
+targets = {k: v for k, v in ASSET_UNIVERSE.items() if k in pdata["target_assets"]}
 
-# ─── Profile Summary ───────────────────────────────────────────────────────────
-st.markdown(f'<div class="section-header">👤 Risk Profile: {name}</div>', unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f"""<div class="metric-card"><h3>Risk Score</h3><h2>{risk_score}/100</h2></div>""", unsafe_allow_html=True)
-with col2:
-    color = profile_data["color"]
-    st.markdown(f"""<div class="metric-card" style="border-left-color:{color}"><h3>Risk Profile</h3><h2 style="color:{color}">{risk_profile}</h2></div>""", unsafe_allow_html=True)
-with col3:
-    st.markdown(f"""<div class="metric-card"><h3>Expected Return Range</h3><h2>{profile_data['expected_return_range']}</h2></div>""", unsafe_allow_html=True)
-with col4:
-    st.markdown(f"""<div class="metric-card"><h3>Investment Horizon</h3><h2>{horizon} Years</h2></div>""", unsafe_allow_html=True)
+# ── Profile Section ────────────────────────────────────────────────────────────
+st.markdown(f'<div class="section-label">Your Profile</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="section-title">Risk Assessment for {name}</div>', unsafe_allow_html=True)
 
-st.markdown(f"**Profile Description:** {profile_data['description']}")
+col_profile, col_gauge, col_kpis = st.columns([1.3, 1, 2.2])
 
-# Risk Score Gauge
-fig_gauge = go.Figure(go.Indicator(
-    mode="gauge+number",
-    value=risk_score,
-    title={"text": "Risk Score", "font": {"size": 16}},
-    gauge={
-        "axis": {"range": [0, 100]},
-        "bar": {"color": profile_data["color"]},
-        "steps": [
-            {"range": [0, 35],  "color": "#DCFCE7"},
-            {"range": [35, 65], "color": "#FEF9C3"},
-            {"range": [65, 100],"color": "#FEE2E2"},
-        ],
-        "threshold": {"line": {"color": "black", "width": 4}, "thickness": 0.75, "value": risk_score}
-    }
-))
-fig_gauge.update_layout(height=250, margin=dict(t=30, b=10, l=30, r=30))
-st.plotly_chart(fig_gauge, use_container_width=True)
+with col_profile:
+    badge_map  = {"Conservative":"badge-conservative","Moderate":"badge-moderate","Aggressive":"badge-aggressive"}
+    cat_colors = {"Conservative":"#065F46","Moderate":"#92400E","Aggressive":"#991B1B"}
+    st.markdown(f"""
+    <div class="profile-card">
+        <div class="profile-badge {badge_map[profile]}">{profile} Investor</div>
+        <div style="font-size:0.82rem; color:{SLATE}; margin-bottom:1rem; line-height:1.5;">{pdata['description']}</div>
+        <div class="profile-row"><span>Name</span><span>{name}</span></div>
+        <div class="profile-row"><span>Age</span><span>{age} years</span></div>
+        <div class="profile-row"><span>Monthly Income</span><span>₹{income:,}</span></div>
+        <div class="profile-row"><span>Horizon</span><span>{horizon} years</span></div>
+        <div class="profile-row"><span>Dependents</span><span>{deps}</span></div>
+        <div class="profile-row"><span>Risk Comfort</span><span>{risk_q}</span></div>
+        <div class="profile-row"><span>Expected Returns</span>
+            <span style="color:{cat_colors[profile]};font-weight:700;">{pdata['expected_return_range']} p.a.</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# ─── Fetch Data ────────────────────────────────────────────────────────────────
-with st.spinner("📡 Fetching live price data from NSE..."):
-    prices, using_fallback = fetch_price_data(selected_assets, years=3)
+with col_gauge:
+    gauge_colors = {"Conservative": GREEN, "Moderate": AMBER, "Aggressive": RED}
+    fig_g = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number={"font": {"size": 36, "family": "DM Serif Display", "color": NAVY}, "suffix": "/100"},
+        gauge={
+            "axis": {"range": [0,100], "tickwidth": 0, "tickcolor": SLATE,
+                     "tickvals": [0,35,65,100], "ticktext": ["0","35","65","100"],
+                     "tickfont": {"size": 10}},
+            "bar": {"color": gauge_colors[profile], "thickness": 0.25},
+            "bgcolor": "white",
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0,35],   "color": "#DCFCE7"},
+                {"range": [35,65],  "color": "#FEF9C3"},
+                {"range": [65,100], "color": "#FEE2E2"},
+            ],
+        }
+    ))
+    fig_g.update_layout(height=200, margin=dict(t=20,b=0,l=20,r=20),
+                        paper_bgcolor="white", plot_bgcolor="white",
+                        font={"family":"DM Sans"})
+    st.markdown('<div class="chart-card" style="padding:1rem;">', unsafe_allow_html=True)
+    st.plotly_chart(fig_g, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-if prices is None or prices.empty or len(prices.columns) < 2:
-    st.error("Could not load data. Please refresh the page and try again.")
+with col_kpis:
+    st.markdown(f"""
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-navy">
+            <div class="kpi-label">Risk Score</div>
+            <div class="kpi-value">{score}</div>
+            <div class="kpi-sub">out of 100</div>
+        </div>
+        <div class="kpi-card kpi-gold">
+            <div class="kpi-label">Profile</div>
+            <div class="kpi-value" style="font-size:1.4rem;">{profile}</div>
+            <div class="kpi-sub">investor type</div>
+        </div>
+        <div class="kpi-card kpi-teal">
+            <div class="kpi-label">Target Return</div>
+            <div class="kpi-value" style="font-size:1.4rem;">{pdata['expected_return_range']}</div>
+            <div class="kpi-sub">per annum</div>
+        </div>
+        <div class="kpi-card kpi-green">
+            <div class="kpi-label">Assets in Pool</div>
+            <div class="kpi-value">{len(targets)}</div>
+            <div class="kpi-sub">from Nifty 500</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── Fetch live data ────────────────────────────────────────────────────────────
+with st.spinner("📡 Fetching live NSE/BSE data..."):
+    tickers_tuple = tuple(targets.items())
+    prices, is_fallback = fetch_price_data(tickers_tuple, years=3)
+
+if prices is None or prices.empty or prices.shape[1] < 2:
+    st.error("Could not load sufficient data. Please refresh.")
     st.stop()
 
-if using_fallback:
-    st.warning(
-        "⚠️ Live NSE data could not be fetched (Yahoo Finance is occasionally restricted on cloud servers). "
-        "Displaying results based on realistic simulated price data using historical return & volatility assumptions per asset class. "
-        "All portfolio math (MPT, Sharpe, Monte Carlo) is fully functional."
-    )
+if is_fallback:
+    st.markdown(f"""
+    <div class="status-sim">
+    ⚠️ <strong>Using Simulated Data</strong> — Yahoo Finance is occasionally rate-limited on cloud servers.
+    Prices are generated using Geometric Brownian Motion calibrated to each asset class's historical
+    return & volatility. All portfolio math (MPT, Sharpe, Monte Carlo) is fully functional.
+    </div>""", unsafe_allow_html=True)
 else:
-    st.success(f"✅ Live data loaded — {len(prices.columns)} assets | {len(prices)} trading days (3 years)")
+    n_assets = prices.shape[1]
+    n_days   = len(prices)
+    st.markdown(f"""
+    <div class="status-live">
+    ✅ <strong>Live NSE Data</strong> — {n_assets} assets loaded · {n_days} trading days · refreshed hourly
+    </div>""", unsafe_allow_html=True)
 
-available_assets = {k: v for k, v in selected_assets.items() if k in prices.columns}
-returns = compute_returns(prices)
+avail_assets = {k: v for k, v in targets.items() if k in prices.columns}
+returns      = compute_returns(prices)
 
-# ─── Run Monte Carlo Simulations ──────────────────────────────────────────────
-st.markdown('<div class="section-header">🎲 Efficient Frontier (3,000 Simulations)</div>', unsafe_allow_html=True)
+# ── Efficient Frontier ─────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Optimisation</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Efficient Frontier & Optimal Portfolio</div>', unsafe_allow_html=True)
 
-with st.spinner("Running Monte Carlo simulations..."):
-    results, weights_arr = run_monte_carlo(returns, n_portfolios=3000)
-    optimal_weights      = get_optimal_portfolio(returns)
-    opt_ret, opt_vol, opt_sharpe = portfolio_performance(optimal_weights, returns)
+with st.spinner("Running 3,000 Monte Carlo simulations…"):
+    mc_res, mc_wts  = monte_carlo(returns, n=3000)
+    opt_w           = optimal_portfolio(returns)
+    opt_r, opt_v, opt_sh = portfolio_perf(opt_w, returns)
 
-# Efficient Frontier Plot
+# Scatter colour = Sharpe ratio
 fig_ef = go.Figure()
 fig_ef.add_trace(go.Scatter(
-    x=results[1, :] * 100,
-    y=results[0, :] * 100,
+    x=mc_res[1]*100, y=mc_res[0]*100,
     mode="markers",
-    marker=dict(color=results[2, :], colorscale="Viridis", size=4, opacity=0.6,
-                colorbar=dict(title="Sharpe Ratio")),
-    text=[f"Sharpe: {results[2,i]:.2f}" for i in range(results.shape[1])],
+    marker=dict(
+        color=mc_res[2], colorscale=[[0,"#DBEAFE"],[0.5,"#60A5FA"],[1,"#1D4ED8"]],
+        size=5, opacity=0.55,
+        colorbar=dict(title="Sharpe", thickness=12, len=0.7,
+                      tickfont=dict(size=10, color=SLATE),
+                      titlefont=dict(size=10, color=SLATE)),
+        line=dict(width=0),
+    ),
     name="Simulated Portfolios",
+    hovertemplate="Return: %{y:.1f}%<br>Risk: %{x:.1f}%<extra></extra>",
 ))
 fig_ef.add_trace(go.Scatter(
-    x=[opt_vol * 100], y=[opt_ret * 100],
+    x=[opt_v*100], y=[opt_r*100],
     mode="markers+text",
-    marker=dict(color="#C9A84C", size=18, symbol="star"),
-    text=["★ Optimal"], textposition="top right",
-    textfont=dict(size=13, color="#1E2761"),
-    name="Optimal Portfolio (Max Sharpe)",
+    marker=dict(color=GOLD, size=22, symbol="star",
+                line=dict(color=NAVY, width=2)),
+    text=["  ★ Optimal"], textposition="middle right",
+    textfont=dict(size=13, color=NAVY, family="DM Serif Display"),
+    name="Optimal Portfolio",
+    hovertemplate=f"Return: {opt_r*100:.1f}%<br>Risk: {opt_v*100:.1f}%<br>Sharpe: {opt_sh:.2f}<extra></extra>",
 ))
 fig_ef.update_layout(
-    title="Efficient Frontier — NSE/BSE Assets",
-    xaxis_title="Annualised Volatility (Risk) %",
-    yaxis_title="Annualised Return %",
-    height=450,
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    legend=dict(x=0.01, y=0.99),
+    height=420,
+    plot_bgcolor=OFF_WHITE, paper_bgcolor=WHITE,
+    xaxis=dict(title="Annualised Volatility (Risk) %", gridcolor=LIGHT,
+               title_font=dict(size=11, color=SLATE), tickfont=dict(size=10, color=SLATE),
+               showline=True, linecolor=LIGHT),
+    yaxis=dict(title="Annualised Return %", gridcolor=LIGHT,
+               title_font=dict(size=11, color=SLATE), tickfont=dict(size=10, color=SLATE),
+               showline=True, linecolor=LIGHT),
+    legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.85)",
+                bordercolor=LIGHT, borderwidth=1,
+                font=dict(size=11, color=NAVY)),
+    margin=dict(t=20, b=40, l=50, r=20),
+    font=dict(family="DM Sans"),
 )
+
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+st.markdown('<div class="chart-title">Efficient Frontier — Nifty 500 Assets</div>', unsafe_allow_html=True)
+st.markdown('<div class="chart-sub">Each dot is a randomly-weighted portfolio. Gold star = max Sharpe Ratio (optimal risk-adjusted return).</div>', unsafe_allow_html=True)
 st.plotly_chart(fig_ef, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-with col1: st.metric("📈 Expected Annual Return", f"{opt_ret*100:.2f}%")
-with col2: st.metric("📊 Annual Volatility (Risk)", f"{opt_vol*100:.2f}%")
-with col3: st.metric("⚡ Sharpe Ratio", f"{opt_sharpe:.3f}")
+# ── Portfolio metrics row ──────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="kpi-grid">
+    <div class="kpi-card kpi-green">
+        <div class="kpi-label">Expected Annual Return</div>
+        <div class="kpi-value">{opt_r*100:.1f}%</div>
+        <div class="kpi-sub">annualised</div>
+    </div>
+    <div class="kpi-card kpi-navy">
+        <div class="kpi-label">Annual Volatility (Risk)</div>
+        <div class="kpi-value">{opt_v*100:.1f}%</div>
+        <div class="kpi-sub">standard deviation</div>
+    </div>
+    <div class="kpi-card kpi-gold">
+        <div class="kpi-label">Sharpe Ratio</div>
+        <div class="kpi-value">{opt_sh:.2f}</div>
+        <div class="kpi-sub">risk-free rate 6.5%</div>
+    </div>
+    <div class="kpi-card kpi-teal">
+        <div class="kpi-label">Assets Selected</div>
+        <div class="kpi-value">{len(prices.columns)}</div>
+        <div class="kpi-sub">in optimal mix</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ─── Optimal Allocation ────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">📊 Optimal Asset Allocation</div>', unsafe_allow_html=True)
+# ── Allocation charts ──────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Allocation</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Optimal Asset Allocation</div>', unsafe_allow_html=True)
 
-allocation_df = pd.DataFrame({
-    "Asset": returns.columns.tolist(),
-    "Category": [available_assets.get(a, (None, "Other"))[1] for a in returns.columns],
-    "Weight (%)": (optimal_weights * 100).round(2),
-    "Annual Return (%)": (returns.mean() * 252 * 100).round(2).values,
-    "Annual Volatility (%)": (returns.std() * np.sqrt(252) * 100).round(2).values,
-})
-allocation_df = allocation_df.sort_values("Weight (%)", ascending=False)
+alloc_df = pd.DataFrame({
+    "Asset":    returns.columns.tolist(),
+    "Category": [avail_assets.get(a, (None,"Other"))[1] for a in returns.columns],
+    "Weight":   (opt_w * 100).round(2),
+    "Ret":      (returns.mean() * 252 * 100).round(1).values,
+    "Vol":      (returns.std() * np.sqrt(252) * 100).round(1).values,
+}).sort_values("Weight", ascending=False)
 
-col1, col2 = st.columns([1, 1])
-with col1:
+# Build a colour list aligned to sorted df categories
+def cat_chart_color(cat):
+    return CAT_COLOURS.get(cat, (NAVY, LIGHT, TEAL))[2]
+
+chart_colors = [cat_chart_color(c) for c in alloc_df["Category"]]
+
+col_pie, col_bar = st.columns(2)
+
+with col_pie:
     fig_pie = go.Figure(go.Pie(
-        labels=allocation_df["Asset"],
-        values=allocation_df["Weight (%)"],
-        hole=0.45,
-        marker=dict(colors=px.colors.qualitative.Bold),
-        textinfo="label+percent",
-        textfont_size=11,
+        labels=alloc_df["Asset"],
+        values=alloc_df["Weight"],
+        hole=0.55,
+        marker=dict(colors=chart_colors, line=dict(color=WHITE, width=2)),
+        textinfo="percent",
+        textfont=dict(size=11, color=WHITE, family="DM Sans"),
+        hovertemplate="%{label}<br>Weight: %{value:.1f}%<extra></extra>",
     ))
     fig_pie.update_layout(
-        title="Portfolio Allocation", height=400,
-        showlegend=False, paper_bgcolor="white",
-        annotations=[dict(text="Optimal", x=0.5, y=0.5, font_size=14, showarrow=False)]
+        height=340,
+        showlegend=False,
+        paper_bgcolor=WHITE,
+        margin=dict(t=10, b=10, l=10, r=10),
+        annotations=[dict(text=f"<b>{len(alloc_df)}</b><br>Assets",
+                          x=0.5, y=0.5, font_size=16, showarrow=False,
+                          font=dict(family="DM Serif Display", color=NAVY))],
     )
+    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    st.markdown('<div class="chart-title">Portfolio Composition</div>', unsafe_allow_html=True)
     st.plotly_chart(fig_pie, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with col2:
+with col_bar:
     fig_bar = go.Figure(go.Bar(
-        x=allocation_df["Weight (%)"],
-        y=allocation_df["Asset"],
+        x=alloc_df["Weight"],
+        y=alloc_df["Asset"],
         orientation="h",
-        marker_color="#1E2761",
-        text=[f"{w:.1f}%" for w in allocation_df["Weight (%)"]],
+        marker=dict(color=chart_colors, line=dict(width=0)),
+        text=[f"{w:.1f}%" for w in alloc_df["Weight"]],
         textposition="outside",
+        textfont=dict(size=10, color=NAVY, family="JetBrains Mono"),  # dark text on white bg
+        hovertemplate="%{y}<br>%{x:.1f}%<extra></extra>",
     ))
     fig_bar.update_layout(
-        title="Weight by Asset", height=400,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis_title="Weight (%)", yaxis_title="",
-        xaxis=dict(gridcolor="#E2E8F0"),
+        height=340,
+        plot_bgcolor=OFF_WHITE,
+        paper_bgcolor=WHITE,
+        xaxis=dict(title="Weight (%)", gridcolor=LIGHT, showline=False,
+                   tickfont=dict(size=10, color=SLATE), range=[0, alloc_df["Weight"].max()*1.18]),
+        yaxis=dict(tickfont=dict(size=10, color=NAVY), autorange="reversed"),
+        margin=dict(t=10, b=40, l=0, r=60),
+        font=dict(family="DM Sans"),
     )
+    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+    st.markdown('<div class="chart-title">Weight by Asset</div>', unsafe_allow_html=True)
     st.plotly_chart(fig_bar, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.dataframe(
-    allocation_df.style.format({"Weight (%)": "{:.2f}%", "Annual Return (%)": "{:.2f}%", "Annual Volatility (%)": "{:.2f}%"}),
-    use_container_width=True, hide_index=True
+# ── Allocation table ───────────────────────────────────────────────────────────
+def cat_chip_html(cat):
+    c = CAT_COLOURS.get(cat, (NAVY, LIGHT, TEAL))
+    return f'<span class="cat-chip" style="background:{c[1]};color:{c[0]};">{cat}</span>'
+
+rows_html = ""
+for _, row in alloc_df.iterrows():
+    bar_w = min(row["Weight"] / alloc_df["Weight"].max() * 100, 100)
+    bar_c = cat_chart_color(row["Category"])
+    ret_color = GREEN if row["Ret"] > 0 else RED
+    rows_html += f"""
+    <tr>
+      <td style="font-weight:600;color:{NAVY}">{row['Asset']}</td>
+      <td>{cat_chip_html(row['Category'])}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <div style="flex:1;background:{LIGHT};border-radius:4px;height:7px;overflow:hidden;">
+            <div style="width:{bar_w}%;background:{bar_c};height:100%;border-radius:4px;"></div>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:{NAVY};font-weight:600;white-space:nowrap;">{row['Weight']:.1f}%</span>
+        </div>
+      </td>
+      <td class="num" style="color:{ret_color};">{row['Ret']:+.1f}%</td>
+      <td class="num" style="color:{SLATE};">{row['Vol']:.1f}%</td>
+    </tr>"""
+
+st.markdown(f"""
+<div class="chart-card">
+  <div class="chart-title">Detailed Allocation Breakdown</div>
+  <div class="chart-sub" style="margin-bottom:1rem;">Sorted by weight · Colour-coded by market cap segment</div>
+  <table class="alloc-table">
+    <thead>
+      <tr>
+        <th>Asset</th><th>Category</th><th>Allocation</th>
+        <th style="text-align:right;">1Y Return</th><th style="text-align:right;">Volatility</th>
+      </tr>
+    </thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Wealth Projection ──────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Projection</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">SIP Wealth Projection</div>', unsafe_allow_html=True)
+
+yrs  = list(range(1, horizon + 1))
+opt_ = [sip_projection(monthly_sip, opt_r,             y) for y in yrs]
+bull = [sip_projection(monthly_sip, opt_r + 0.03,      y) for y in yrs]
+bear = [sip_projection(monthly_sip, max(opt_r-0.04,.05),y) for y in yrs]
+inv  = [monthly_sip * 12 * y                             for y in yrs]
+
+fig_w = go.Figure()
+fig_w.add_trace(go.Scatter(x=yrs, y=[v/1e5 for v in bull], mode="lines",
+    name="Bull Case", line=dict(color=GREEN, dash="dash", width=2),
+    hovertemplate="Year %{x}<br>₹%{y:.1f}L<extra>Bull</extra>"))
+fig_w.add_trace(go.Scatter(x=yrs, y=[v/1e5 for v in opt_], mode="lines",
+    name="Base Case", line=dict(color=NAVY, width=3),
+    hovertemplate="Year %{x}<br>₹%{y:.1f}L<extra>Base</extra>"))
+fig_w.add_trace(go.Scatter(x=yrs, y=[v/1e5 for v in bear], mode="lines",
+    name="Bear Case", line=dict(color=RED, dash="dot", width=2),
+    hovertemplate="Year %{x}<br>₹%{y:.1f}L<extra>Bear</extra>"))
+fig_w.add_trace(go.Scatter(x=yrs, y=[v/1e5 for v in inv],  mode="lines",
+    name="Invested", line=dict(color=SLATE, dash="longdash", width=1.5),
+    fill="tozeroy", fillcolor="rgba(100,116,139,0.06)",
+    hovertemplate="Year %{x}<br>₹%{y:.1f}L<extra>Invested</extra>"))
+fig_w.update_layout(
+    height=400, plot_bgcolor=OFF_WHITE, paper_bgcolor=WHITE,
+    xaxis=dict(title="Years", gridcolor=LIGHT, tickfont=dict(size=10,color=SLATE)),
+    yaxis=dict(title="Value (₹ Lakhs)", gridcolor=LIGHT, tickfont=dict(size=10,color=SLATE)),
+    legend=dict(orientation="h", y=-0.18, x=0.5, xanchor="center",
+                bgcolor="rgba(0,0,0,0)", font=dict(size=11,color=NAVY)),
+    margin=dict(t=10, b=60, l=60, r=20),
+    font=dict(family="DM Sans"),
+    hovermode="x unified",
 )
 
-# ─── Wealth Projection ────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">💰 SIP Wealth Projection</div>', unsafe_allow_html=True)
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+st.markdown(f'<div class="chart-title">SIP Growth — ₹{monthly_sip:,}/month over {horizon} Years</div>', unsafe_allow_html=True)
+st.plotly_chart(fig_w, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-years_list   = list(range(1, horizon + 1))
-optimistic   = [project_wealth(monthly_sip, opt_ret + 0.03, y) for y in years_list]
-base         = [project_wealth(monthly_sip, opt_ret,         y) for y in years_list]
-conservative = [project_wealth(monthly_sip, max(opt_ret - 0.04, 0.05), y) for y in years_list]
-invested     = [monthly_sip * 12 * y for y in years_list]
+total_inv = monthly_sip * 12 * horizon
+st.markdown(f"""
+<div class="kpi-grid">
+    <div class="kpi-card kpi-navy">
+        <div class="kpi-label">Total Invested</div>
+        <div class="kpi-value">₹{total_inv/1e5:.1f}L</div>
+        <div class="kpi-sub">over {horizon} years</div>
+    </div>
+    <div class="kpi-card kpi-gold">
+        <div class="kpi-label">Base Case Corpus</div>
+        <div class="kpi-value">₹{opt_[-1]/1e5:.1f}L</div>
+        <div class="kpi-sub">at {opt_r*100:.1f}% p.a.</div>
+    </div>
+    <div class="kpi-card kpi-green">
+        <div class="kpi-label">Wealth Multiplier</div>
+        <div class="kpi-value">{opt_[-1]/total_inv:.1f}x</div>
+        <div class="kpi-sub">on invested capital</div>
+    </div>
+    <div class="kpi-card kpi-teal">
+        <div class="kpi-label">Total Gain</div>
+        <div class="kpi-value">₹{(opt_[-1]-total_inv)/1e5:.1f}L</div>
+        <div class="kpi-sub">absolute gain</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-fig_wealth = go.Figure()
-fig_wealth.add_trace(go.Scatter(x=years_list, y=[v/1e5 for v in optimistic],   mode="lines", name="Optimistic Scenario",   line=dict(color="#16A34A", dash="dash", width=2)))
-fig_wealth.add_trace(go.Scatter(x=years_list, y=[v/1e5 for v in base],         mode="lines", name="Base Case (Optimal)",   line=dict(color="#1E2761", width=3)))
-fig_wealth.add_trace(go.Scatter(x=years_list, y=[v/1e5 for v in conservative], mode="lines", name="Conservative Scenario", line=dict(color="#DC2626", dash="dot", width=2)))
-fig_wealth.add_trace(go.Scatter(x=years_list, y=[v/1e5 for v in invested],     mode="lines", name="Total Invested",        line=dict(color="#94A3B8", dash="longdash", width=1.5), fill="tozeroy", fillcolor="rgba(148,163,184,0.1)"))
+# ── Historical Performance ─────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Historical</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Normalised Price Performance (3 Years)</div>', unsafe_allow_html=True)
 
-fig_wealth.update_layout(
-    title=f"SIP Wealth Growth — ₹{monthly_sip:,}/month over {horizon} Years",
-    xaxis_title="Years", yaxis_title="Portfolio Value (₹ Lakhs)",
-    height=420, plot_bgcolor="white", paper_bgcolor="white",
-    legend=dict(x=0.01, y=0.99), xaxis=dict(gridcolor="#E2E8F0"), yaxis=dict(gridcolor="#E2E8F0"),
+norm = prices / prices.iloc[0] * 100
+fig_h = go.Figure()
+palette = px.colors.qualitative.Plotly + px.colors.qualitative.D3
+for i, col in enumerate(norm.columns):
+    fig_h.add_trace(go.Scatter(
+        x=norm.index, y=norm[col], mode="lines", name=col,
+        line=dict(width=1.5, color=palette[i % len(palette)]),
+        hovertemplate=f"{col}: %{{y:.1f}}<extra></extra>",
+    ))
+fig_h.add_hline(y=100, line_dash="dot", line_color=SLATE, line_width=1, opacity=0.5)
+fig_h.update_layout(
+    height=400, plot_bgcolor=OFF_WHITE, paper_bgcolor=WHITE,
+    xaxis=dict(gridcolor=LIGHT, tickfont=dict(size=10,color=SLATE)),
+    yaxis=dict(title="Normalised Price (Base = 100)", gridcolor=LIGHT,
+               tickfont=dict(size=10,color=SLATE)),
+    legend=dict(orientation="h", y=-0.25, font=dict(size=9,color=NAVY)),
+    margin=dict(t=10, b=80, l=60, r=20),
+    font=dict(family="DM Sans"), hovermode="x unified",
 )
-st.plotly_chart(fig_wealth, use_container_width=True)
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+st.markdown('<div class="chart-title">Price History (Base = 100 at Start)</div>', unsafe_allow_html=True)
+st.markdown('<div class="chart-sub">Dotted line at 100 = no gain. Assets above have outperformed since start date.</div>', unsafe_allow_html=True)
+st.plotly_chart(fig_h, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-total_invested = monthly_sip * 12 * horizon
-with col1: st.metric("💸 Total Invested", f"₹{total_invested/1e5:.2f}L")
-with col2: st.metric("🎯 Base Case Corpus", f"₹{base[-1]/1e5:.2f}L")
-with col3: st.metric("📈 Wealth Multiplier", f"{base[-1]/total_invested:.2f}x")
+# ── Correlation Heatmap ────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Correlation</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">Asset Correlation Matrix</div>', unsafe_allow_html=True)
 
-# ─── Historical Performance ────────────────────────────────────────────────────
-st.markdown('<div class="section-header">📅 Historical Normalized Performance (3 Years)</div>', unsafe_allow_html=True)
-norm_prices = prices / prices.iloc[0] * 100
-fig_hist = go.Figure()
-for col in norm_prices.columns:
-    fig_hist.add_trace(go.Scatter(x=norm_prices.index, y=norm_prices[col], mode="lines", name=col))
-fig_hist.update_layout(
-    height=380, plot_bgcolor="white", paper_bgcolor="white",
-    xaxis_title="Date", yaxis_title="Normalized Price (Base=100)",
-    xaxis=dict(gridcolor="#E2E8F0"), yaxis=dict(gridcolor="#E2E8F0"),
-    legend=dict(orientation="h", y=-0.2)
-)
-st.plotly_chart(fig_hist, use_container_width=True)
-
-# ─── Correlation Heatmap ────────────────────────────────────────────────────────
-st.markdown('<div class="section-header">🔗 Asset Correlation Matrix</div>', unsafe_allow_html=True)
 corr = returns.corr()
-fig_corr = go.Figure(go.Heatmap(
+fig_c = go.Figure(go.Heatmap(
     z=corr.values, x=corr.columns, y=corr.columns,
-    colorscale="RdBu_r", zmid=0,
-    text=corr.values.round(2), texttemplate="%{text}", textfont_size=10,
+    colorscale=[[0, "#EFF6FF"], [0.5, "#93C5FD"], [1, NAVY]],
+    zmid=0.5,
+    text=corr.values.round(2),
+    texttemplate="%{text}",
+    textfont=dict(size=9, color=NAVY, family="JetBrains Mono"),
+    hoverongaps=False,
+    colorbar=dict(thickness=12, len=0.9,
+                  tickfont=dict(size=9, color=SLATE)),
 ))
-fig_corr.update_layout(height=380, paper_bgcolor="white")
-st.plotly_chart(fig_corr, use_container_width=True)
+fig_c.update_layout(
+    height=420, paper_bgcolor=WHITE,
+    xaxis=dict(tickfont=dict(size=9, color=NAVY), side="bottom"),
+    yaxis=dict(tickfont=dict(size=9, color=NAVY), autorange="reversed"),
+    margin=dict(t=10, b=10, l=10, r=10),
+    font=dict(family="DM Sans"),
+)
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+st.markdown('<div class="chart-title">Correlation Matrix</div>', unsafe_allow_html=True)
+st.markdown('<div class="chart-sub">Lower correlation between assets = better diversification. Dark blue = highly correlated.</div>', unsafe_allow_html=True)
+st.plotly_chart(fig_c, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ─── Footer ───────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("""
-<div style='text-align:center; color:#64748B; font-size:0.85rem'>
-    Portfolio Optimizer | Equity Capital Markets & Wealth Management Project | NSE/BSE Data via Yahoo Finance<br>
-    <em>For academic purposes only. Not financial advice. Past performance does not guarantee future results.</em>
+# ── Footer ─────────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="footer">
+    <strong>NiftyEdge Portfolio Optimizer</strong> · Equity Capital Markets & Wealth Management Project<br>
+    Nifty 500 universe · NSE/BSE live data via Yahoo Finance · Markowitz MPT · Sharpe Ratio Optimisation<br><br>
+    <em>For academic and educational purposes only. Not financial advice.
+    Past performance does not guarantee future results. Consult a SEBI-registered advisor.</em>
 </div>
 """, unsafe_allow_html=True)
